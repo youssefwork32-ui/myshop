@@ -79,7 +79,9 @@ if(ok){firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore();auth=fire
 let view='shop',cat='all',q='',tab='products',ed=null,pd=null,sel={},dirty=false,owner=false,delId=null,msg='';
 const app=document.getElementById('app');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const money=n=>Number(n||0).toLocaleString('ar-EG')+' ج.م';
+const CUR=[['ج.م','جنيه مصري'],['ر.س','ريال سعودي'],['د.إ','درهم إماراتي'],['د.ك','دينار كويتي'],['ر.ق','ريال قطري'],['د.ب','دينار بحريني'],['ر.ع','ريال عماني'],['د.أ','دينار أردني'],['$','دولار أمريكي'],['€','يورو']];
+const safeUrl=u=>/^https?:\/\//i.test(u)?u:(/^[a-z]+:/i.test(u)?'#':'https://'+u);
+const money=n=>Number(n||0).toLocaleString('ar-EG')+' '+(S.store.cur||'ج.م');
 const list=s=>String(s||'').split(/[,،]/).map(x=>x.trim()).filter(Boolean);
 const thumb=p=>p.imgs&&p.imgs[0]?`<img src="${esc(p.imgs[0])}" alt="">`:'🛍️';
 const cats=()=>`<div class="chips"><button class="chip ${cat=='all'?'on':''}" data-a="cat" data-v="all">الكل</button>${S.cats.map(c=>`<button class="chip ${cat==c?'on':''}" data-a="cat" data-v="${esc(c)}">${esc(c)}</button>`).join('')}</div>`;
@@ -91,7 +93,7 @@ function shop(){
   <nav class="nv"><span class="all" data-a="cat" data-v="all">☰ كل الأقسام</span>${S.cats.map(c=>`<a class="${cat==c?'cur':''}" data-a="cat" data-v="${esc(c)}">${esc(c)}</a>`).join('')}</nav>
   ${cat=='all'&&!q?hero():''}
   <div class="sec"><h2>${cat=='all'?'أحدث المنتجات':esc(cat)}</h2><span class="yt">${ps.length} منتج</span></div>
-  <div class="grid">${ps.map(p=>`<div class="card" data-a="open" data-v="${p.id}"><div class="im">${thumb(p)}</div>${p.stock<=0?'<span class="tag">نفد</span>':''}<div class="b"><div class="nm">${esc(p.name)}</div><span class="pc">${money(p.price)}</span>${p.old>p.price?`<span class="old">${money(p.old)}</span>`:''}</div></div>`).join('')||'<p class="mu">مفيش منتجات في القسم ده دلوقتي.</p>'}</div>${pd?prod():''}`;
+  <div class="grid">${ps.map(p=>`<div class="card" data-a="open" data-v="${p.id}"><div class="im">${thumb(p)}</div>${p.stock<=0?'<span class="tag">نفد</span>':''}<div class="b"><div class="nm">${esc(p.name)}</div><span class="pc">${money(p.price)}</span>${p.old>p.price?`<span class="old">${money(p.old)}</span>`:''}</div></div>`).join('')||'<p class="mu">مفيش منتجات في القسم ده دلوقتي.</p>'}</div><p style="text-align:center;margin:30px 0 10px"><a href="#admin" class="mu" style="text-decoration:none">دخول الأدمن</a></p>${pd?prod():''}`;
 }
 function hero(){
   const c=S.cats;
@@ -99,14 +101,14 @@ function hero(){
   <div class="sec"><h2>تسوقي حسب القسم</h2></div><div class="bt">${c.map(x=>`<div data-a="cat" data-v="${esc(x)}">${esc(x)}</div>`).join('')}</div>`;
 }
 function prod(){
-  const p=pd,msgT=`أهلاً، عايز أطلب: ${p.name}${sel.size?' - مقاس '+sel.size:''}${sel.color?' - لون '+sel.color:''} - السعر ${p.price} ج.م`;
+  const p=pd,msgT=`أهلاً، عايز أطلب: ${p.name}${sel.size?' - مقاس '+sel.size:''}${sel.color?' - لون '+sel.color:''} - السعر ${p.price} ${S.store.cur||'ج.م'}`;
   const ch=(k,arr)=>arr.length?`<label>${k=='size'?'المقاس':'اللون'}</label><div class="chips">${arr.map(v=>`<button class="chip ${sel[k]==v?'on':''}" data-a="sel" data-k="${k}" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>`:'';
   return `<div class="mo" data-a="close"><div class="md" data-a="stop"><button data-a="close">✕</button>
   ${p.imgs.length?`<div class="gal">${p.imgs.map(i=>`<img src="${esc(i)}" alt="">`).join('')}</div>`:`<div class="im" style="border-radius:12px;height:160px">🛍️</div>`}
   <h2 style="margin:10px 0 0">${esc(p.name)}</h2><div class="mu">${esc(p.cat)}</div>
   <div><span class="pc" style="font-size:20px">${money(p.price)}</span>${p.old>p.price?`<span class="old">${money(p.old)}</span>`:''}</div>
   <p>${esc(p.desc)}</p>${ch('size',p.sizes)}${ch('color',p.colors)}
-  ${p.stock<=0?'<p class="dg" style="border:0">المنتج غير متوفر حالياً</p>':(S.store.wa?`<a class="wa" target="_blank" rel="noopener" href="https://wa.me/${esc(S.store.wa)}?text=${encodeURIComponent(msgT)}">اطلب عبر واتساب</a>`:'<p class="mu">لسه مفيش رقم واتساب للطلب.</p>')}</div></div>`;
+  ${p.stock<=0?'<p class="dg" style="border:0">المنتج غير متوفر حالياً</p>':(p.link?`<a class="wa" target="_blank" rel="noopener" href="${esc(safeUrl(p.link))}">اشتري الآن</a>`:S.store.wa?`<a class="wa" target="_blank" rel="noopener" href="https://wa.me/${esc(S.store.wa)}?text=${encodeURIComponent(msgT)}">اطلب عبر واتساب</a>`:'<p class="mu">لسه مفيش رقم واتساب للطلب.</p>')}</div></div>`;
 }
 function dash(){
   let body='';
@@ -115,7 +117,7 @@ function dash(){
   }else if(tab=='cats'){
     body=`<div class="row"><input id="nc" placeholder="اسم قسم جديد"><button class="pr" data-a="addcat">إضافة</button></div>`+S.cats.map(c=>`<div class="row"><div class="i">${esc(c)} <span class="mu">(${S.products.filter(p=>p.cat==c).length} منتج)</span></div><button data-a="rencat" data-v="${esc(c)}">تغيير الاسم</button><button class="dg" data-a="delcat" data-v="${esc(c)}">حذف</button></div>`).join('');
   }else{
-    body=`<label>اسم المتجر</label><input id="sn" value="${esc(S.store.name)}"><label>رقم واتساب (بكود الدولة بدون +، مثال 201001234567)</label><input id="sw" value="${esc(S.store.wa)}" inputmode="numeric"><br><br><button class="pr" data-a="sets">حفظ الإعدادات</button>`;
+    body=`<label>اسم المتجر</label><input id="sn" value="${esc(S.store.name)}"><label>رقم واتساب (بكود الدولة بدون +، مثال 201001234567)</label><input id="sw" value="${esc(S.store.wa)}" inputmode="numeric"><label>العملة</label><select id="sc">${CUR.map(c=>`<option value="${c[0]}" ${(S.store.cur||'ج.م')==c[0]?'selected':''}>${c[1]} (${c[0]})</option>`).join('')}</select><br><br><button class="pr" data-a="sets">حفظ الإعدادات</button>`;
   }
   return `<div class="bar"><button data-a="shop">← المتجر</button><b style="flex:1">لوحة التحكم</b><button data-a="logout">تسجيل خروج</button></div>
   <div class="chips">${[['products','المنتجات'],['cats','الأقسام'],['set','الإعدادات']].map(([k,t])=>`<button class="chip ${tab==k?'on':''}" data-a="tab" data-v="${k}">${t}</button>`).join('')}</div>${body}
@@ -126,17 +128,17 @@ function form(){
   return `<div class="mo"><div class="md"><h3 style="margin-top:0">${p.isNew?'منتج جديد':'تعديل المنتج'}</h3>
   <label>اسم المنتج</label><input id="f_name" value="${esc(p.name)}">
   <div class="g2"><div><label>القسم</label><select id="f_cat">${S.cats.map(c=>`<option ${c==p.cat?'selected':''}>${esc(c)}</option>`).join('')}</select></div><div><label>المخزون (كمية)</label><input id="f_stock" type="number" min="0" value="${p.stock}"></div>
-  <div><label>السعر (ج.م)</label><input id="f_price" type="number" min="0" value="${p.price}"></div><div><label>السعر قبل الخصم (اختياري)</label><input id="f_old" type="number" min="0" value="${p.old||''}"></div></div>
+  <div><label>السعر (${esc(S.store.cur||'ج.م')})</label><input id="f_price" type="number" min="0" value="${p.price}"></div><div><label>السعر قبل الخصم (اختياري)</label><input id="f_old" type="number" min="0" value="${p.old||''}"></div></div>
   <label>المقاسات (افصلي بفاصلة: S, M, L)</label><input id="f_sizes" value="${esc(p.sizes.join(', '))}">
   <label>الألوان (افصلي بفاصلة)</label><input id="f_colors" value="${esc(p.colors.join('، '))}">
   <label>الوصف</label><textarea id="f_desc" rows="3">${esc(p.desc)}</textarea>
-  <label>الصور</label><input id="f_file" type="file" accept="image/*" multiple>
+  <label>لينك الشراء (الزبون يتحول عليه لما يدوس اشتري)</label><input id="f_link" dir="ltr" placeholder="https://..." value="${esc(p.link||'')}"><label>الصور</label><input id="f_file" type="file" accept="image/*" multiple>
   <div class="thumbs">${p.imgs.map((i,n)=>`<img src="${esc(i)}" data-a="rmimg" data-v="${n}" title="اضغطي للحذف" alt="">`).join('')}</div>
   <label><input type="checkbox" id="f_on" style="width:auto" ${p.on?'checked':''}> ظاهر في المتجر</label><br>
   <div style="display:flex;gap:8px"><button class="pr" data-a="saveP" style="flex:1">حفظ</button><button data-a="cancelP">إلغاء</button></div></div></div>`;
 }
 async function w(f){try{await f();toast('تم الحفظ ✓')}catch(e){toast('فشل الحفظ: '+(e.code||e.message))}}
-const saveSet=cats=>w(()=>db.collection('settings').doc('main').set({name:S.store.name,wa:S.store.wa,cats}));
+const saveSet=cats=>w(()=>db.collection('settings').doc('main').set({name:S.store.name,wa:S.store.wa,cur:S.store.cur||'ج.م',cats}));
 function login(){return `<div style="max-width:340px;margin:60px auto"><h2>دخول الأدمن</h2><label>الإيميل</label><input id="le" type="email" dir="ltr"><label>الباسورد</label><input id="lp" type="password" dir="ltr"><br><br><button class="pr" data-a="login" style="width:100%">دخول</button><p class="mu">${esc(lerr)}</p><button data-a="shop" style="width:100%">← المتجر</button></div>`}
 function draw(){
   const keep=document.activeElement&&document.activeElement.id;
@@ -147,7 +149,7 @@ function draw(){
 function toast(t){msg=t;draw();setTimeout(()=>{msg='';draw()},2200)}
 function readForm(){
   const v=id=>document.getElementById(id).value;
-  Object.assign(ed,{name:v('f_name').trim()||'منتج بدون اسم',cat:v('f_cat'),stock:+v('f_stock')||0,price:+v('f_price')||0,old:+v('f_old')||0,sizes:list(v('f_sizes')),colors:list(v('f_colors')),desc:v('f_desc'),on:document.getElementById('f_on').checked});
+  Object.assign(ed,{name:v('f_name').trim()||'منتج بدون اسم',cat:v('f_cat'),stock:+v('f_stock')||0,price:+v('f_price')||0,old:+v('f_old')||0,sizes:list(v('f_sizes')),colors:list(v('f_colors')),desc:v('f_desc'),link:v('f_link').trim(),on:document.getElementById('f_on').checked});
 }
 function shrink(file){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,640/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.72))};im.src=fr.result};fr.readAsDataURL(file)})}
 async function publish(){
@@ -179,9 +181,9 @@ app.addEventListener('click',async e=>{
   else if(a=='saveP'){readForm();delete ed.isNew;ed.ts=ed.ts||Date.now();const x=ed;if(JSON.stringify(x).length>900000){toast('الصور كبيرة، قللي عددها');return}ed=null;await w(()=>db.collection('products').doc(x.id).set(x))}
   else if(a=='del'){if(delId==v){delId=null;await w(()=>db.collection('products').doc(v).delete())}else delId=v}
   else if(a=='addcat'){const n=document.getElementById('nc').value.trim();if(n&&!S.cats.includes(n))await saveSet([...S.cats,n])}
-  else if(a=='rencat'){const n=(prompt('الاسم الجديد',v)||'').trim();if(n){const b=db.batch();b.set(db.collection('settings').doc('main'),{name:S.store.name,wa:S.store.wa,cats:S.cats.map(c=>c==v?n:c)});S.products.filter(p=>p.cat==v).forEach(p=>b.update(db.collection('products').doc(p.id),{cat:n}));await w(()=>b.commit())}}
+  else if(a=='rencat'){const n=(prompt('الاسم الجديد',v)||'').trim();if(n){const b=db.batch();b.set(db.collection('settings').doc('main'),{name:S.store.name,wa:S.store.wa,cur:S.store.cur||'ج.م',cats:S.cats.map(c=>c==v?n:c)});S.products.filter(p=>p.cat==v).forEach(p=>b.update(db.collection('products').doc(p.id),{cat:n}));await w(()=>b.commit())}}
   else if(a=='delcat'){if(S.products.some(p=>p.cat==v)){toast('انقلي المنتجات لقسم تاني الأول')}else{await saveSet(S.cats.filter(c=>c!=v))}}
-  else if(a=='sets'){S.store.name=document.getElementById('sn').value.trim()||'متجري';S.store.wa=document.getElementById('sw').value.replace(/\D/g,'');await saveSet(S.cats)}
+  else if(a=='sets'){S.store.name=document.getElementById('sn').value.trim()||'متجري';S.store.wa=document.getElementById('sw').value.replace(/\D/g,'');S.store.cur=document.getElementById('sc').value;await saveSet(S.cats)}
   else if(a=='logout'){await auth.signOut();view='shop';history.replaceState(null,'',location.pathname)}
   draw();
 });
@@ -193,7 +195,7 @@ document.title=S.store.name;
 draw();
 window.addEventListener('hashchange',()=>{if(owner&&location.hash=='#admin')view='dash';draw()});
 if(ok){
- db.collection('settings').doc('main').onSnapshot(d=>{if(d.exists){const x=d.data();S.store={name:x.name||S.store.name,wa:x.wa||''};S.cats=x.cats||S.cats;document.title=S.store.name}draw()});
+ db.collection('settings').doc('main').onSnapshot(d=>{if(d.exists){const x=d.data();S.store={name:x.name||S.store.name,wa:x.wa||'',cur:x.cur||'ج.م'};S.cats=x.cats||S.cats;document.title=S.store.name}draw()});
  db.collection('products').onSnapshot(q2=>{S.products=q2.docs.map(d=>d.data()).sort((a,b)=>(b.ts||0)-(a.ts||0));draw()});
  auth.onAuthStateChanged(u=>{owner=!!u&&u.email==ADMIN_EMAIL;if(owner&&location.hash=='#admin')view='dash';draw()});
 }

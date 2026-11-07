@@ -80,6 +80,7 @@ let view='shop',cat='all',q='',tab='products',ed=null,pd=null,sel={},dirty=false
 const app=document.getElementById('app');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const CUR=[['ر.س','ريال سعودي'],['ج.م','جنيه مصري'],['د.إ','درهم إماراتي'],['د.ك','دينار كويتي'],['ر.ق','ريال قطري'],['د.ب','دينار بحريني'],['ر.ع','ريال عماني'],['د.أ','دينار أردني'],['$','دولار أمريكي'],['€','يورو']];
+const safeUrl=u=>/^https?:\/\//i.test(u)?u:(/^[a-z]+:/i.test(u)?'#':'https://'+u);
 const money=n=>Number(n||0).toLocaleString('en-US')+' '+(S.store.cur||'ر.س');
 const list=s=>String(s||'').split(/[,،]/).map(x=>x.trim()).filter(Boolean);
 const thumb=p=>p.imgs&&p.imgs[0]?`<img src="${esc(p.imgs[0])}" alt="">`:'🛍️';
@@ -107,7 +108,7 @@ function prod(){
   <h2 style="margin:10px 0 0">${esc(p.name)}</h2><div class="mu">${esc(p.cat)}</div>
   <div><span class="pc" style="font-size:20px">${money(p.price)}</span>${p.old>p.price?`<span class="old">${money(p.old)}</span>`:''}</div>
   <p>${esc(p.desc)}</p>${ch('size',p.sizes)}${ch('color',p.colors)}
-  ${p.stock<=0?'<p class="dg" style="border:0">المنتج مو متوفر حالياً</p>':(S.store.wa?`<a class="wa" target="_blank" rel="noopener" href="https://wa.me/${esc(S.store.wa)}?text=${encodeURIComponent(msgT)}">اطلب عبر واتساب</a>`:'<p class="mu">رقم الواتساب للطلب ما انضاف للحين.</p>')}</div></div>`;
+  ${p.stock<=0?'<p class="dg" style="border:0">المنتج مو متوفر حالياً</p>':(p.link?`<a class="wa" target="_blank" rel="noopener" href="${esc(safeUrl(p.link))}">اشتر الحين</a>`:S.store.wa?`<a class="wa" target="_blank" rel="noopener" href="https://wa.me/${esc(S.store.wa)}?text=${encodeURIComponent(msgT)}">اطلب عبر واتساب</a>`:'<p class="mu">رقم الواتساب للطلب ما انضاف للحين.</p>')}</div></div>`;
 }
 function dash(){
   let body='';
@@ -131,7 +132,7 @@ function form(){
   <label>المقاسات (افصل بفاصلة: S, M, L)</label><input id="f_sizes" value="${esc(p.sizes.join(', '))}">
   <label>الألوان (افصل بفاصلة)</label><input id="f_colors" value="${esc(p.colors.join('، '))}">
   <label>الوصف</label><textarea id="f_desc" rows="3">${esc(p.desc)}</textarea>
-  <label>الصور</label><input id="f_file" type="file" accept="image/*" multiple>
+  <label>رابط الشراء (العميل يتحوّل له لما يضغط اشتر)</label><input id="f_link" dir="ltr" placeholder="https://..." value="${esc(p.link||'')}"><label>الصور</label><input id="f_file" type="file" accept="image/*" multiple>
   <div class="thumbs">${p.imgs.map((i,n)=>`<img src="${esc(i)}" data-a="rmimg" data-v="${n}" title="اضغط للحذف" alt="">`).join('')}</div>
   <label><input type="checkbox" id="f_on" style="width:auto" ${p.on?'checked':''}> ظاهر في المتجر</label><br>
   <div style="display:flex;gap:8px"><button class="pr" data-a="saveP" style="flex:1">حفظ</button><button data-a="cancelP">إلغاء</button></div></div></div>`;
@@ -148,7 +149,7 @@ function draw(){
 function toast(t){msg=t;draw();setTimeout(()=>{msg='';draw()},2200)}
 function readForm(){
   const v=id=>document.getElementById(id).value;
-  Object.assign(ed,{name:v('f_name').trim()||'منتج بدون اسم',cat:v('f_cat'),stock:+v('f_stock')||0,price:+v('f_price')||0,old:+v('f_old')||0,sizes:list(v('f_sizes')),colors:list(v('f_colors')),desc:v('f_desc'),on:document.getElementById('f_on').checked});
+  Object.assign(ed,{name:v('f_name').trim()||'منتج بدون اسم',cat:v('f_cat'),stock:+v('f_stock')||0,price:+v('f_price')||0,old:+v('f_old')||0,sizes:list(v('f_sizes')),colors:list(v('f_colors')),desc:v('f_desc'),link:v('f_link').trim(),on:document.getElementById('f_on').checked});
 }
 function shrink(file){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,640/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.72))};im.src=fr.result};fr.readAsDataURL(file)})}
 async function publish(){
